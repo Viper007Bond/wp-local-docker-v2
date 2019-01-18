@@ -24,6 +24,10 @@ const configure = async function( env ) {
 
     console.log( "Configuring WordPress" );
     execSync( `docker-compose exec phpfpm su -s /bin/bash www-data -c "wp config create --force --dbname=${envSlug}"`, { stdio: 'inherit', cwd: envPath });
+
+	console.log( "Configuring WordPress to use memcached" );
+	execSync( `docker-compose exec phpfpm su -s /bin/bash www-data -c "wp config set --type=constant WP_CACHE_KEY_SALT ${envSlug}"`, { stdio: 'inherit', cwd: envPath });
+	execSync( `docker-compose exec phpfpm su -s /bin/bash www-data -c "wp config set --type=variable --raw memcached_servers \\"array( 'default' => array( 'memcached:11211' ) )\\"`, { stdio: 'inherit', cwd: envPath });
 };
 
 const install = async function( env, envHost, answers ) {
@@ -49,6 +53,9 @@ const install = async function( env, envHost, answers ) {
     }
 
     execSync( `docker-compose exec phpfpm su -s /bin/bash www-data -c "wp core ${command} ${flags} --url=http://${envHost} --title=\\"${answers.title}\\" --admin_user=\\"${answers.username}\\" --admin_password=\\"${answers.password}\\" --admin_email=\\"${answers.email}\\""`, { stdio: 'inherit', cwd: envPath });
+
+    // Memcached
+	execSync( `docker-compose exec phpfpm su -s /bin/bash www-data -c "wp plugin install memcached-is-your-friend --activate"`, { stdio: 'inherit', cwd: envPath });
 };
 
 const setRewrites = async function( env ) {
